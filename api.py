@@ -1,5 +1,5 @@
 from fastapi import FastAPI, UploadFile, File
-from service import extract_and_parse_data, getIndicator
+from service import extract_and_parse_data, getIndicatorData
 
 app = FastAPI()
 
