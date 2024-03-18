@@ -97,8 +97,6 @@ def extract_and_parse_data(entityName, pdf_file, filename):
     # create vector store
     vectorstore = get_vectorstore(text_chunks)
 
-    benchmarkDetails = []
-
     for esgIndicator in esgTypes:
         benchmark = {}
 
