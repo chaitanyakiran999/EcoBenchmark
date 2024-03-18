@@ -429,11 +429,11 @@ def generate_pdf(entityName, pdf_file, filename):
     pdf_file.build(elements)
 
     # Connect to Azure Storage account
-    conn_str = "DefaultEndpointsProtocol=https;AccountName=storagegreen1;AccountKey=FiOs4yDc85FEXpZdi+uoET7Vltiq4nAVP0GM81mlVV+wxbeRZBBT1wwVjtGIPcS6sOnpdyDcllYK+AStYBGghA==;EndpointSuffix=core.windows.net"
+    conn_str = os.getenv("YOUR_AZURE_STORAGE_CONNECTION_STRING")
     blob_service_client = BlobServiceClient.from_connection_string(conn_str)
 
     # Create a container (if it doesn't already exist)
-    container_name = "esg-reports-greendreamers"
+    container_name = os.getenv("AZURE_CONTAINER_NAME")
     try:
         container_client = blob_service_client.create_container(container_name)
     except Exception as e:
