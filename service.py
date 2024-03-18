@@ -429,7 +429,7 @@ def generate_pdf(entityName, pdf_file, filename):
     pdf_file.build(elements)
 
     # Connect to Azure Storage account
-    conn_str = os.getenv("YOUR_AZURE_STORAGE_CONNECTION_STRING")
+    conn_str = os.getenv("AZURE_STORAGE_CONNECTION_STRING")
     blob_service_client = BlobServiceClient.from_connection_string(conn_str)
 
     # Create a container (if it doesn't already exist)
