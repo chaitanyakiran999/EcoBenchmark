@@ -158,7 +158,7 @@ def get_data_from_pdf(esgIndicator, esgType, vectorstore, filename):
     return benchmark
 
 
-def getIndicator(entityName, esgType, esgIndicator, documentUpload):
+def getIndicatorData(entityName, esgType, esgIndicator, documentUpload):
     pdf_text = extract_text_from_pdf(documentUpload.file)
     # get the text chunks
     text_chunks = get_text_chunks(pdf_text)
