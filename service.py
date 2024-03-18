@@ -163,7 +163,19 @@ def getIndicatorData(entityName, esgType, esgIndicator, documentUpload):
     # create vector store
     vectorstore = get_vectorstore(text_chunks)
 
-    data = get_data_from_pdf(esgIndicator, esgType, vectorstore, documentUpload.filename)
+    data = []
+
+    if esgIndicator != "MSCISustainalytics" or esgIndicator != "SBTi" or esgIndicator != "CDP":
+        data = get_data_from_pdf(esgIndicator, esgType, vectorstore, documentUpload.filename)
+
+    if esgIndicator == "MSCISustainalytics":
+        data = get_msci_sustainalytics_data(entityName, esgTypes[esgIndicator], esgIndicator)
+
+    if esgIndicator == "SBTi":
+        data = get_sbti_data(entityName, esgIndicator)
+
+    if esgIndicator == "CDP":
+        data = get_cdp_data(entityName, esgIndicator)
 
     esgEntityResponse = {
         "entityName": entityName,
