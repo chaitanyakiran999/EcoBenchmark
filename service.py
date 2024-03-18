@@ -9,9 +9,14 @@ from langchain_community.embeddings import OpenAIEmbeddings
 from langchain_community.vectorstores import FAISS
 from langchain.llms.openai import AzureOpenAI
 
+from reportlab.lib.pagesizes import letter, inch
+from reportlab.platypus import SimpleDocTemplate, Table, TableStyle
+
 import requests
 from bs4 import BeautifulSoup
 import json
+
+from azure.storage.blob import BlobServiceClient, BlobClient, ContainerClient
 
 from dotenv import load_dotenv
 import os
@@ -280,9 +285,7 @@ def get_llm():
 def getESGScore(name):
     url = "https://www.sustainalytics.com/sustapi/companyratings/GetCompanyDropdown"
 
-    name_chunk = name.split()
-
-    payload = {'filter': name_chunk[0],
+    payload = {'filter': name,
                'page': '1',
                'pagesize': '1',
                'resourcePackage': 'Sustainalytics'}
@@ -290,22 +293,27 @@ def getESGScore(name):
     response = requests.request("POST", url, data=payload)
 
     html = response.text
-    parsed_html = BeautifulSoup(html)
-    actualName=name
-    if parsed_html.find('div', {'class': 'companyName'}) is not None:
-        actualName = parsed_html.find('div', {'class': 'companyName'}).span.text
-    print(actualName)
+    parsed_html = BeautifulSoup(html, features="html.parser")
+    actualNameDiv = parsed_html.find('div', {'class': 'companyName'})
+    if actualNameDiv is None:
+        return None
+    actualName = actualNameDiv.span.text
+    # print(actualName)
 
-    score = "null"
-    if actualName is not None:
-        code = parsed_html.find('a', attrs={'class': 'search-link'})['data-href']
-        print(code)
-        url2 = "https://www.sustainalytics.com/esg-rating" + code
-        response2 = requests.request("GET", url2)
-        score = BeautifulSoup(response2.text).find('div', attrs={'class': 'risk-rating-score'}).span.text
-        print(score)
+    if name != actualName:
+        return None
 
-    return score
+    code = parsed_html.find('a', attrs={'class': 'search-link'})['data-href']
+
+    # print(code)
+
+    url2 = "https://www.sustainalytics.com/esg-rating" + code
+    response2 = requests.request("GET", url2)
+    esgRating = BeautifulSoup(response2.text, features="html.parser").find('div', attrs={
+        'class': 'risk-rating-score'}).span.text
+    # print(esgRating)
+
+    return esgRating
 
 def getCompanyName(e):
     return e['companyName']
@@ -354,7 +362,8 @@ def getMSCIRating(name):
                 'Referer': 'https://www.msci.com/our-solutions/esg-investing/esg-ratings-climate-search-tool/issuer/' + actualEncodedName + '/' + urlCode,
             }
             response2 = requests.request("GET", url2, headers=headers2, data=payload2)
-            rattingDivClasses = BeautifulSoup(response2.text, features="html.parser").find('div', attrs={'class': 'ratingdata-company-rating'})['class']
+            rattingDivClasses = BeautifulSoup(response2.text, features="html.parser").find('div', attrs={
+                'class': 'ratingdata-company-rating'})['class']
             for rattingClass in rattingDivClasses:
                 if rattingClass.startswith('esg-rating-circle-'):
                     #print(rattingClass)
@@ -374,3 +383,73 @@ def getCDPScore(name):
         return None
     CDPScore = actualNameDiv.text.replace("\n", "")
     return CDPScore
+
+def generate_pdf(entityName, pdf_file, filename):
+    data = extract_and_parse_data(entityName, pdf_file, filename)
+
+    # Create a PDF file
+    pdf_file = SimpleDocTemplate(str(entityName+"_esg_reports.pdf").lower(), pagesize=letter)
+
+    # Create a container for elements
+    elements = []
+
+    # Extract relevant data from JSON
+    table_data = []
+    headers_row = [
+                'ESG Types',
+                'ESG Indicators',
+                'Primary Details',
+                'Secondary Details'
+            ]
+    table_data.append(headers_row)
+    for entity in data['esgResponse']:
+        for benchmark in entity['benchmarkDetails']:
+            row = [
+                benchmark['esgType'],
+                benchmark['esgIndicators'],
+                benchmark['primaryDetails'],
+                benchmark['secondaryDetails']
+            ]
+            table_data.append(row)
+
+    # Create a table from the data
+    table = Table(table_data, colWidths=[2*inch, 2*inch, 2*inch, 2*inch])
+    table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), '#CCCCCC'),
+        ('TEXTCOLOR', (0, 0), (-1, 0), '#FFFFFF'),
+        ('FONTSIZE', (0,0), (-1,-1), 10),
+        ('BOTTOMPADDING', (0,0), (-1,-1), 6),
+        ('TOPPADDING', (0,0), (-1,-1), 6),
+    ]))
+
+    # Add the table to the PDF
+    elements.append(table)
+
+    # Build the PDF
+    pdf_file.build(elements)
+
+    # Connect to Azure Storage account
+    conn_str = "DefaultEndpointsProtocol=https;AccountName=storagegreen1;AccountKey=FiOs4yDc85FEXpZdi+uoET7Vltiq4nAVP0GM81mlVV+wxbeRZBBT1wwVjtGIPcS6sOnpdyDcllYK+AStYBGghA==;EndpointSuffix=core.windows.net"
+    blob_service_client = BlobServiceClient.from_connection_string(conn_str)
+
+    # Create a container (if it doesn't already exist)
+    container_name = "esg-reports-greendreamers"
+    try:
+        container_client = blob_service_client.create_container(container_name)
+    except Exception as e:
+        print(f"Container '{container_name}' already exists.")
+        container_client = blob_service_client.get_container_client(container_name)
+
+    # Upload the PDF file
+    local_file_path = str(entityName+"_esg_reports.pdf").lower()  # Path to the local PDF file
+
+    blob_name = str(entityName+"_esg_reports.pdf").lower()
+
+    # Truncate the name if it exceeds 63 characters
+    blob_name = blob_name[:63]
+
+    with open(local_file_path, "rb") as local_data:
+        blob_client = container_client.upload_blob(name=blob_name, data=local_data)
+
+    print(f"PDF file uploaded to Azure Storage: {blob_client.primary_endpoint}/{container_name}/{blob_name}")
+    return f"{blob_client.primary_endpoint}/{container_name}/{blob_name}"
