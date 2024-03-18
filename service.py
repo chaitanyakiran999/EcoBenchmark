@@ -4,8 +4,6 @@ import datetime
 from PyPDF2 import PdfReader
 from langchain.chains.conversational_retrieval.base import ConversationalRetrievalChain
 from langchain.memory import ConversationBufferMemory
-from langchain_community.document_loaders import UnstructuredURLLoader
-from unstructured.cleaners.core import remove_punctuation,clean,clean_extra_whitespace
 from langchain.text_splitter import CharacterTextSplitter
 from langchain_community.embeddings import OpenAIEmbeddings
 from langchain_community.vectorstores import FAISS
@@ -239,15 +237,6 @@ def extract_text_from_pdf(pdf_file):
         page = pdf_reader.pages[page_num]
         text += page.extract_text()
     return text
-
-def extract_text_from_url(url):
-    loader = UnstructuredURLLoader(urls=[url], mode="elements",
- post_processors=[clean,remove_punctuation,clean_extra_whitespace])
-    elements = loader.load()
-    selected_elements = [e for e in elements if e.metadata['category'] == "NarrativeText"]
-    full_clean = " ".join([e.page_content for e in selected_elements])
-    print(full_clean)
-    return full_clean
 
 def get_text_chunks(text):
     text_splitter = CharacterTextSplitter(
