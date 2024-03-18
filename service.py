@@ -196,7 +196,9 @@ def get_text_chunks(text):
 
 
 def get_vectorstore(text_chunks):
-    embeddings = OpenAIEmbeddings()
+    embeddings = OpenAIEmbeddings(
+        openai_api_key="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"
+    )
     # embeddings = HuggingFaceInstructEmbeddings()
     vectorstore = FAISS.from_texts(texts=text_chunks, embedding=embeddings)
     return vectorstore
@@ -214,11 +216,11 @@ def get_conversation_chain(vectorstore):
 
 def get_llm():
     return AzureOpenAI(
-        deployment_name=os.getenv("AZURE_OPENAI_DEPLOYMENT_NAME"),
+        deployment_name="EcoBenchmark",
         openai_api_version="2023-05-15",
         model_name="gpt-35-turbo-instruct",
-        openai_api_key=os.getenv("AZURE_OPENAI_API_KEY"),
-        azure_endpoint=os.getenv("AZURE_OPENAI_ENDPOINT"),
+        openai_api_key="e77ed5d8f42d470097a79b4e389349d9",
+        azure_endpoint="https://ecobenchmark.openai.azure.com/",
         temperature=0,
-        max_tokens=100
+        max_tokens=500
     )
