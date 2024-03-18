@@ -197,7 +197,7 @@ def get_text_chunks(text):
 
 def get_vectorstore(text_chunks):
     embeddings = OpenAIEmbeddings(
-        openai_api_key="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"
+        openai_api_key="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"
     )
     # embeddings = HuggingFaceInstructEmbeddings()
     vectorstore = FAISS.from_texts(texts=text_chunks, embedding=embeddings)
