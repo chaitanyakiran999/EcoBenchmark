@@ -8,5 +8,4 @@ openai~=1.14.1
 tiktoken~=0.6.0
 faiss-cpu~=1.8.0
 unstructured~=0.11.8
-python-magic-bin
 bs4~=0.0.2
